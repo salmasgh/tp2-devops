@@ -1,0 +1,228 @@
+apiVersion: v1
+data:
+  grafana-dashboard-sre.json: "{\r\n \"uid\": \"payment-api-sre\",\r\n \"title\":
+    \"Payment API - SRE (RED + SLO + Error Budget)\",\r\n \"tags\": [\r\n  \"sre\",\r\n
+    \ \"slo\",\r\n  \"tp2\"\r\n ],\r\n \"timezone\": \"browser\",\r\n \"schemaVersion\":
+    39,\r\n \"refresh\": \"10s\",\r\n \"time\": {\r\n  \"from\": \"now-30m\",\r\n
+    \ \"to\": \"now\"\r\n },\r\n \"panels\": [\r\n  {\r\n   \"id\": 1,\r\n   \"type\":
+    \"row\",\r\n   \"title\": \"SLO & Error Budget (Availability 99.5 % / Latency
+    p95 <= 200 ms)\",\r\n   \"collapsed\": false,\r\n   \"gridPos\": {\r\n    \"x\":
+    0,\r\n    \"y\": 0,\r\n    \"w\": 24,\r\n    \"h\": 1\r\n   },\r\n   \"panels\":
+    []\r\n  },\r\n  {\r\n   \"id\": 2,\r\n   \"type\": \"gauge\",\r\n   \"title\":
+    \"Error Budget Remaining (periode du dashboard)\",\r\n   \"datasource\": {\r\n
+    \   \"type\": \"prometheus\",\r\n    \"uid\": \"prometheus\"\r\n   },\r\n   \"gridPos\":
+    {\r\n    \"x\": 0,\r\n    \"y\": 1,\r\n    \"w\": 6,\r\n    \"h\": 7\r\n   },\r\n
+    \  \"fieldConfig\": {\r\n    \"defaults\": {\r\n     \"unit\": \"percentunit\",\r\n
+    \    \"decimals\": 2,\r\n     \"thresholds\": {\r\n      \"mode\": \"absolute\",\r\n
+    \     \"steps\": [\r\n       {\r\n        \"color\": \"red\",\r\n        \"value\":
+    null\r\n       },\r\n       {\r\n        \"color\": \"orange\",\r\n        \"value\":
+    0\r\n       },\r\n       {\r\n        \"color\": \"yellow\",\r\n        \"value\":
+    0.25\r\n       },\r\n       {\r\n        \"color\": \"green\",\r\n        \"value\":
+    0.5\r\n       }\r\n      ]\r\n     },\r\n     \"min\": -1,\r\n     \"max\": 1\r\n
+    \   },\r\n    \"overrides\": []\r\n   },\r\n   \"options\": {\r\n    \"reduceOptions\":
+    {\r\n     \"calcs\": [\r\n      \"lastNotNull\"\r\n     ]\r\n    },\r\n    \"colorMode\":
+    \"background\",\r\n    \"graphMode\": \"area\",\r\n    \"showThresholdLabels\":
+    false,\r\n    \"showThresholdMarkers\": true\r\n   },\r\n   \"targets\": [\r\n
+    \   {\r\n     \"refId\": \"A\",\r\n     \"expr\": \"1 - ((1 - (sum(increase(http_requests_total{app=\\\"payment-api\\\",status!~\\\"5..\\\"}[$__range]))
+    / clamp_min(sum(increase(http_requests_total{app=\\\"payment-api\\\"}[$__range])),1)))
+    / 0.005)\",\r\n     \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n      \"uid\":
+    \"prometheus\"\r\n     }\r\n    }\r\n   ]\r\n  },\r\n  {\r\n   \"id\": 3,\r\n
+    \  \"type\": \"stat\",\r\n   \"title\": \"Availability SLI (periode)\",\r\n   \"datasource\":
+    {\r\n    \"type\": \"prometheus\",\r\n    \"uid\": \"prometheus\"\r\n   },\r\n
+    \  \"gridPos\": {\r\n    \"x\": 6,\r\n    \"y\": 1,\r\n    \"w\": 5,\r\n    \"h\":
+    7\r\n   },\r\n   \"fieldConfig\": {\r\n    \"defaults\": {\r\n     \"unit\": \"percentunit\",\r\n
+    \    \"decimals\": 3,\r\n     \"thresholds\": {\r\n      \"mode\": \"absolute\",\r\n
+    \     \"steps\": [\r\n       {\r\n        \"color\": \"red\",\r\n        \"value\":
+    null\r\n       },\r\n       {\r\n        \"color\": \"green\",\r\n        \"value\":
+    0.995\r\n       }\r\n      ]\r\n     }\r\n    },\r\n    \"overrides\": []\r\n
+    \  },\r\n   \"options\": {\r\n    \"reduceOptions\": {\r\n     \"calcs\": [\r\n
+    \     \"lastNotNull\"\r\n     ]\r\n    },\r\n    \"colorMode\": \"background\",\r\n
+    \   \"graphMode\": \"area\",\r\n    \"showThresholdLabels\": false,\r\n    \"showThresholdMarkers\":
+    true\r\n   },\r\n   \"targets\": [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\":
+    \"sum(increase(http_requests_total{app=\\\"payment-api\\\",status!~\\\"5..\\\"}[$__range]))
+    / clamp_min(sum(increase(http_requests_total{app=\\\"payment-api\\\"}[$__range])),1)\",\r\n
+    \    \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n
+    \    }\r\n    }\r\n   ]\r\n  },\r\n  {\r\n   \"id\": 4,\r\n   \"type\": \"stat\",\r\n
+    \  \"title\": \"Latency SLI : % requetes < 200 ms (periode)\",\r\n   \"datasource\":
+    {\r\n    \"type\": \"prometheus\",\r\n    \"uid\": \"prometheus\"\r\n   },\r\n
+    \  \"gridPos\": {\r\n    \"x\": 11,\r\n    \"y\": 1,\r\n    \"w\": 5,\r\n    \"h\":
+    7\r\n   },\r\n   \"fieldConfig\": {\r\n    \"defaults\": {\r\n     \"unit\": \"percentunit\",\r\n
+    \    \"decimals\": 2,\r\n     \"thresholds\": {\r\n      \"mode\": \"absolute\",\r\n
+    \     \"steps\": [\r\n       {\r\n        \"color\": \"red\",\r\n        \"value\":
+    null\r\n       },\r\n       {\r\n        \"color\": \"green\",\r\n        \"value\":
+    0.95\r\n       }\r\n      ]\r\n     }\r\n    },\r\n    \"overrides\": []\r\n   },\r\n
+    \  \"options\": {\r\n    \"reduceOptions\": {\r\n     \"calcs\": [\r\n      \"lastNotNull\"\r\n
+    \    ]\r\n    },\r\n    \"colorMode\": \"background\",\r\n    \"graphMode\": \"area\",\r\n
+    \   \"showThresholdLabels\": false,\r\n    \"showThresholdMarkers\": true\r\n
+    \  },\r\n   \"targets\": [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\":
+    \"sum(increase(http_request_duration_seconds_bucket{app=\\\"payment-api\\\",le=\\\"0.2\\\"}[$__range]))
+    / clamp_min(sum(increase(http_request_duration_seconds_count{app=\\\"payment-api\\\"}[$__range])),1)\",\r\n
+    \    \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n
+    \    }\r\n    }\r\n   ]\r\n  },\r\n  {\r\n   \"id\": 5,\r\n   \"type\": \"stat\",\r\n
+    \  \"title\": \"Burn rate 1h\",\r\n   \"datasource\": {\r\n    \"type\": \"prometheus\",\r\n
+    \   \"uid\": \"prometheus\"\r\n   },\r\n   \"gridPos\": {\r\n    \"x\": 16,\r\n
+    \   \"y\": 1,\r\n    \"w\": 4,\r\n    \"h\": 7\r\n   },\r\n   \"fieldConfig\":
+    {\r\n    \"defaults\": {\r\n     \"unit\": \"none\",\r\n     \"decimals\": 2,\r\n
+    \    \"thresholds\": {\r\n      \"mode\": \"absolute\",\r\n      \"steps\": [\r\n
+    \      {\r\n        \"color\": \"green\",\r\n        \"value\": null\r\n       },\r\n
+    \      {\r\n        \"color\": \"orange\",\r\n        \"value\": 6\r\n       },\r\n
+    \      {\r\n        \"color\": \"red\",\r\n        \"value\": 14.4\r\n       }\r\n
+    \     ]\r\n     }\r\n    },\r\n    \"overrides\": []\r\n   },\r\n   \"options\":
+    {\r\n    \"reduceOptions\": {\r\n     \"calcs\": [\r\n      \"lastNotNull\"\r\n
+    \    ]\r\n    },\r\n    \"colorMode\": \"background\",\r\n    \"graphMode\": \"area\",\r\n
+    \   \"showThresholdLabels\": false,\r\n    \"showThresholdMarkers\": true\r\n
+    \  },\r\n   \"targets\": [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\":
+    \"slo:burn_rate:1h\",\r\n     \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n
+    \     \"uid\": \"prometheus\"\r\n     }\r\n    }\r\n   ]\r\n  },\r\n  {\r\n   \"id\":
+    6,\r\n   \"type\": \"stat\",\r\n   \"title\": \"Error budget restant (30j glissants)\",\r\n
+    \  \"datasource\": {\r\n    \"type\": \"prometheus\",\r\n    \"uid\": \"prometheus\"\r\n
+    \  },\r\n   \"gridPos\": {\r\n    \"x\": 20,\r\n    \"y\": 1,\r\n    \"w\": 4,\r\n
+    \   \"h\": 7\r\n   },\r\n   \"fieldConfig\": {\r\n    \"defaults\": {\r\n     \"unit\":
+    \"percentunit\",\r\n     \"decimals\": 2,\r\n     \"thresholds\": {\r\n      \"mode\":
+    \"absolute\",\r\n      \"steps\": [\r\n       {\r\n        \"color\": \"red\",\r\n
+    \       \"value\": null\r\n       },\r\n       {\r\n        \"color\": \"orange\",\r\n
+    \       \"value\": 0\r\n       },\r\n       {\r\n        \"color\": \"green\",\r\n
+    \       \"value\": 0.5\r\n       }\r\n      ]\r\n     },\r\n     \"min\": -1,\r\n
+    \    \"max\": 1\r\n    },\r\n    \"overrides\": []\r\n   },\r\n   \"options\":
+    {\r\n    \"reduceOptions\": {\r\n     \"calcs\": [\r\n      \"lastNotNull\"\r\n
+    \    ]\r\n    },\r\n    \"colorMode\": \"background\",\r\n    \"graphMode\": \"area\",\r\n
+    \   \"showThresholdLabels\": false,\r\n    \"showThresholdMarkers\": true\r\n
+    \  },\r\n   \"targets\": [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\":
+    \"slo:error_budget_remaining:ratio30d\",\r\n     \"datasource\": {\r\n      \"type\":
+    \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n     }\r\n    }\r\n   ]\r\n
+    \ },\r\n  {\r\n   \"id\": 7,\r\n   \"type\": \"timeseries\",\r\n   \"title\":
+    \"Burn Rate multi-fenetres (seuils 14.4 page / 6 slack)\",\r\n   \"datasource\":
+    {\r\n    \"type\": \"prometheus\",\r\n    \"uid\": \"prometheus\"\r\n   },\r\n
+    \  \"gridPos\": {\r\n    \"x\": 0,\r\n    \"y\": 8,\r\n    \"w\": 24,\r\n    \"h\":
+    8\r\n   },\r\n   \"fieldConfig\": {\r\n    \"defaults\": {\r\n     \"unit\": \"none\",\r\n
+    \    \"custom\": {\r\n      \"lineWidth\": 2,\r\n      \"fillOpacity\": 10,\r\n
+    \     \"thresholdsStyle\": {\r\n       \"mode\": \"line+area\"\r\n      }\r\n
+    \    },\r\n     \"thresholds\": {\r\n      \"mode\": \"absolute\",\r\n      \"steps\":
+    [\r\n       {\r\n        \"color\": \"transparent\",\r\n        \"value\": null\r\n
+    \      },\r\n       {\r\n        \"color\": \"orange\",\r\n        \"value\":
+    6\r\n       },\r\n       {\r\n        \"color\": \"red\",\r\n        \"value\":
+    14.4\r\n       }\r\n      ]\r\n     }\r\n    },\r\n    \"overrides\": []\r\n   },\r\n
+    \  \"options\": {\r\n    \"legend\": {\r\n     \"displayMode\": \"table\",\r\n
+    \    \"placement\": \"right\",\r\n     \"calcs\": [\r\n      \"lastNotNull\",\r\n
+    \     \"max\"\r\n     ]\r\n    },\r\n    \"tooltip\": {\r\n     \"mode\": \"multi\"\r\n
+    \   }\r\n   },\r\n   \"targets\": [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\":
+    \"slo:burn_rate:5m\",\r\n     \"legendFormat\": \"5m\",\r\n     \"datasource\":
+    {\r\n      \"type\": \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n     }\r\n
+    \   },\r\n    {\r\n     \"refId\": \"B\",\r\n     \"expr\": \"slo:burn_rate:30m\",\r\n
+    \    \"legendFormat\": \"30m\",\r\n     \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n
+    \     \"uid\": \"prometheus\"\r\n     }\r\n    },\r\n    {\r\n     \"refId\":
+    \"C\",\r\n     \"expr\": \"slo:burn_rate:1h\",\r\n     \"legendFormat\": \"1h\",\r\n
+    \    \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n
+    \    }\r\n    },\r\n    {\r\n     \"refId\": \"D\",\r\n     \"expr\": \"slo:burn_rate:6h\",\r\n
+    \    \"legendFormat\": \"6h\",\r\n     \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n
+    \     \"uid\": \"prometheus\"\r\n     }\r\n    }\r\n   ]\r\n  },\r\n  {\r\n   \"id\":
+    8,\r\n   \"type\": \"row\",\r\n   \"title\": \"RED - Rate / Errors / Duration\",\r\n
+    \  \"collapsed\": false,\r\n   \"gridPos\": {\r\n    \"x\": 0,\r\n    \"y\": 16,\r\n
+    \   \"w\": 24,\r\n    \"h\": 1\r\n   },\r\n   \"panels\": []\r\n  },\r\n  {\r\n
+    \  \"id\": 9,\r\n   \"type\": \"timeseries\",\r\n   \"title\": \"Rate - debit
+    (RPS) par route\",\r\n   \"datasource\": {\r\n    \"type\": \"prometheus\",\r\n
+    \   \"uid\": \"prometheus\"\r\n   },\r\n   \"gridPos\": {\r\n    \"x\": 0,\r\n
+    \   \"y\": 17,\r\n    \"w\": 12,\r\n    \"h\": 8\r\n   },\r\n   \"fieldConfig\":
+    {\r\n    \"defaults\": {\r\n     \"unit\": \"reqps\",\r\n     \"custom\": {\r\n
+    \     \"lineWidth\": 2,\r\n      \"fillOpacity\": 10\r\n     }\r\n    },\r\n    \"overrides\":
+    []\r\n   },\r\n   \"options\": {\r\n    \"legend\": {\r\n     \"displayMode\":
+    \"table\",\r\n     \"placement\": \"right\",\r\n     \"calcs\": [\r\n      \"lastNotNull\",\r\n
+    \     \"max\"\r\n     ]\r\n    },\r\n    \"tooltip\": {\r\n     \"mode\": \"multi\"\r\n
+    \   }\r\n   },\r\n   \"targets\": [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\":
+    \"sum by (route) (rate(http_requests_total{app=\\\"payment-api\\\"}[1m]))\",\r\n
+    \    \"legendFormat\": \"{{route}}\",\r\n     \"datasource\": {\r\n      \"type\":
+    \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n     }\r\n    },\r\n    {\r\n
+    \    \"refId\": \"B\",\r\n     \"expr\": \"sum(rate(http_requests_total{app=\\\"payment-api\\\"}[1m]))\",\r\n
+    \    \"legendFormat\": \"TOTAL\",\r\n     \"datasource\": {\r\n      \"type\":
+    \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n     }\r\n    }\r\n   ]\r\n
+    \ },\r\n  {\r\n   \"id\": 10,\r\n   \"type\": \"timeseries\",\r\n   \"title\":
+    \"Errors - erreurs 5xx par seconde\",\r\n   \"datasource\": {\r\n    \"type\":
+    \"prometheus\",\r\n    \"uid\": \"prometheus\"\r\n   },\r\n   \"gridPos\": {\r\n
+    \   \"x\": 12,\r\n    \"y\": 17,\r\n    \"w\": 6,\r\n    \"h\": 8\r\n   },\r\n
+    \  \"fieldConfig\": {\r\n    \"defaults\": {\r\n     \"unit\": \"reqps\",\r\n
+    \    \"custom\": {\r\n      \"lineWidth\": 2,\r\n      \"fillOpacity\": 10\r\n
+    \    }\r\n    },\r\n    \"overrides\": []\r\n   },\r\n   \"options\": {\r\n    \"legend\":
+    {\r\n     \"displayMode\": \"table\",\r\n     \"placement\": \"right\",\r\n     \"calcs\":
+    [\r\n      \"lastNotNull\",\r\n      \"max\"\r\n     ]\r\n    },\r\n    \"tooltip\":
+    {\r\n     \"mode\": \"multi\"\r\n    }\r\n   },\r\n   \"targets\": [\r\n    {\r\n
+    \    \"refId\": \"A\",\r\n     \"expr\": \"sum by (route) (rate(http_requests_total{app=\\\"payment-api\\\",status=~\\\"5..\\\"}[1m]))\",\r\n
+    \    \"legendFormat\": \"{{route}}\",\r\n     \"datasource\": {\r\n      \"type\":
+    \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n     }\r\n    }\r\n   ]\r\n
+    \ },\r\n  {\r\n   \"id\": 11,\r\n   \"type\": \"stat\",\r\n   \"title\": \"Errors
+    - % d'erreur global (5m)\",\r\n   \"datasource\": {\r\n    \"type\": \"prometheus\",\r\n
+    \   \"uid\": \"prometheus\"\r\n   },\r\n   \"gridPos\": {\r\n    \"x\": 18,\r\n
+    \   \"y\": 17,\r\n    \"w\": 6,\r\n    \"h\": 8\r\n   },\r\n   \"fieldConfig\":
+    {\r\n    \"defaults\": {\r\n     \"unit\": \"percentunit\",\r\n     \"decimals\":
+    2,\r\n     \"thresholds\": {\r\n      \"mode\": \"absolute\",\r\n      \"steps\":
+    [\r\n       {\r\n        \"color\": \"green\",\r\n        \"value\": null\r\n
+    \      },\r\n       {\r\n        \"color\": \"orange\",\r\n        \"value\":
+    0.005\r\n       },\r\n       {\r\n        \"color\": \"red\",\r\n        \"value\":
+    0.03\r\n       }\r\n      ]\r\n     }\r\n    },\r\n    \"overrides\": []\r\n   },\r\n
+    \  \"options\": {\r\n    \"reduceOptions\": {\r\n     \"calcs\": [\r\n      \"lastNotNull\"\r\n
+    \    ]\r\n    },\r\n    \"colorMode\": \"background\",\r\n    \"graphMode\": \"area\",\r\n
+    \   \"showThresholdLabels\": false,\r\n    \"showThresholdMarkers\": true\r\n
+    \  },\r\n   \"targets\": [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\":
+    \"sum(rate(http_requests_total{app=\\\"payment-api\\\",status=~\\\"5..\\\"}[5m]))
+    / clamp_min(sum(rate(http_requests_total{app=\\\"payment-api\\\"}[5m])),1e-9)\",\r\n
+    \    \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n
+    \    }\r\n    }\r\n   ]\r\n  },\r\n  {\r\n   \"id\": 12,\r\n   \"type\": \"timeseries\",\r\n
+    \  \"title\": \"Duration - distribution des latences (p50/p90/p95/p99)\",\r\n
+    \  \"datasource\": {\r\n    \"type\": \"prometheus\",\r\n    \"uid\": \"prometheus\"\r\n
+    \  },\r\n   \"gridPos\": {\r\n    \"x\": 0,\r\n    \"y\": 25,\r\n    \"w\": 12,\r\n
+    \   \"h\": 8\r\n   },\r\n   \"fieldConfig\": {\r\n    \"defaults\": {\r\n     \"unit\":
+    \"s\",\r\n     \"custom\": {\r\n      \"lineWidth\": 2,\r\n      \"fillOpacity\":
+    10,\r\n      \"thresholdsStyle\": {\r\n       \"mode\": \"line+area\"\r\n      }\r\n
+    \    },\r\n     \"thresholds\": {\r\n      \"mode\": \"absolute\",\r\n      \"steps\":
+    [\r\n       {\r\n        \"color\": \"transparent\",\r\n        \"value\": null\r\n
+    \      },\r\n       {\r\n        \"color\": \"red\",\r\n        \"value\": 0.2\r\n
+    \      }\r\n      ]\r\n     }\r\n    },\r\n    \"overrides\": []\r\n   },\r\n
+    \  \"options\": {\r\n    \"legend\": {\r\n     \"displayMode\": \"table\",\r\n
+    \    \"placement\": \"right\",\r\n     \"calcs\": [\r\n      \"lastNotNull\",\r\n
+    \     \"max\"\r\n     ]\r\n    },\r\n    \"tooltip\": {\r\n     \"mode\": \"multi\"\r\n
+    \   }\r\n   },\r\n   \"targets\": [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\":
+    \"histogram_quantile(0.5, sum by (le) (rate(http_request_duration_seconds_bucket{app=\\\"payment-api\\\"}[1m])))\",\r\n
+    \    \"legendFormat\": \"p50\",\r\n     \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n
+    \     \"uid\": \"prometheus\"\r\n     }\r\n    },\r\n    {\r\n     \"refId\":
+    \"B\",\r\n     \"expr\": \"histogram_quantile(0.9, sum by (le) (rate(http_request_duration_seconds_bucket{app=\\\"payment-api\\\"}[1m])))\",\r\n
+    \    \"legendFormat\": \"p90\",\r\n     \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n
+    \     \"uid\": \"prometheus\"\r\n     }\r\n    },\r\n    {\r\n     \"refId\":
+    \"C\",\r\n     \"expr\": \"histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{app=\\\"payment-api\\\"}[1m])))\",\r\n
+    \    \"legendFormat\": \"p95\",\r\n     \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n
+    \     \"uid\": \"prometheus\"\r\n     }\r\n    },\r\n    {\r\n     \"refId\":
+    \"D\",\r\n     \"expr\": \"histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app=\\\"payment-api\\\"}[1m])))\",\r\n
+    \    \"legendFormat\": \"p99\",\r\n     \"datasource\": {\r\n      \"type\": \"prometheus\",\r\n
+    \     \"uid\": \"prometheus\"\r\n     }\r\n    }\r\n   ]\r\n  },\r\n  {\r\n   \"id\":
+    13,\r\n   \"type\": \"timeseries\",\r\n   \"title\": \"Duration - p95 par route\",\r\n
+    \  \"datasource\": {\r\n    \"type\": \"prometheus\",\r\n    \"uid\": \"prometheus\"\r\n
+    \  },\r\n   \"gridPos\": {\r\n    \"x\": 12,\r\n    \"y\": 25,\r\n    \"w\": 12,\r\n
+    \   \"h\": 8\r\n   },\r\n   \"fieldConfig\": {\r\n    \"defaults\": {\r\n     \"unit\":
+    \"s\",\r\n     \"custom\": {\r\n      \"lineWidth\": 2,\r\n      \"fillOpacity\":
+    10\r\n     }\r\n    },\r\n    \"overrides\": []\r\n   },\r\n   \"options\": {\r\n
+    \   \"legend\": {\r\n     \"displayMode\": \"table\",\r\n     \"placement\": \"right\",\r\n
+    \    \"calcs\": [\r\n      \"lastNotNull\",\r\n      \"max\"\r\n     ]\r\n    },\r\n
+    \   \"tooltip\": {\r\n     \"mode\": \"multi\"\r\n    }\r\n   },\r\n   \"targets\":
+    [\r\n    {\r\n     \"refId\": \"A\",\r\n     \"expr\": \"histogram_quantile(0.95,
+    sum by (le, route) (rate(http_request_duration_seconds_bucket{app=\\\"payment-api\\\"}[1m])))\",\r\n
+    \    \"legendFormat\": \"{{route}}\",\r\n     \"datasource\": {\r\n      \"type\":
+    \"prometheus\",\r\n      \"uid\": \"prometheus\"\r\n     }\r\n    }\r\n   ]\r\n
+    \ },\r\n  {\r\n   \"id\": 14,\r\n   \"type\": \"row\",\r\n   \"title\": \"Correlation
+    Logs <-> Traces (Loki / Tempo)\",\r\n   \"collapsed\": false,\r\n   \"gridPos\":
+    {\r\n    \"x\": 0,\r\n    \"y\": 33,\r\n    \"w\": 24,\r\n    \"h\": 1\r\n   },\r\n
+    \  \"panels\": []\r\n  },\r\n  {\r\n   \"id\": 15,\r\n   \"type\": \"logs\",\r\n
+    \  \"title\": \"Logs JSON payment-api (Loki) - trace_id cliquable vers Tempo\",\r\n
+    \  \"datasource\": {\r\n    \"type\": \"loki\",\r\n    \"uid\": \"loki\"\r\n   },\r\n
+    \  \"gridPos\": {\r\n    \"x\": 0,\r\n    \"y\": 34,\r\n    \"w\": 24,\r\n    \"h\":
+    10\r\n   },\r\n   \"options\": {\r\n    \"showTime\": true,\r\n    \"wrapLogMessage\":
+    true,\r\n    \"prettifyLogMessage\": false,\r\n    \"enableLogDetails\": true,\r\n
+    \   \"sortOrder\": \"Descending\"\r\n   },\r\n   \"targets\": [\r\n    {\r\n     \"refId\":
+    \"A\",\r\n     \"datasource\": {\r\n      \"type\": \"loki\",\r\n      \"uid\":
+    \"loki\"\r\n     },\r\n     \"expr\": \"{service_name=\\\"payment-api\\\"} | json
+    | level=~\\\"ERROR|INFO\\\"\"\r\n    }\r\n   ]\r\n  }\r\n ],\r\n \"annotations\":
+    {\r\n  \"list\": []\r\n },\r\n \"templating\": {\r\n  \"list\": []\r\n }\r\n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    grafana_dashboard: "1"
+  name: payment-api-sre-dashboard
+  namespace: monitoring
