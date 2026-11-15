@@ -1,0 +1,13 @@
+.venv
+.git
+tests
+docs
+k6
+k8s
+policies
+observability
+argocd
+*.xml
+*.lcov
+.coverage
+__pycache__

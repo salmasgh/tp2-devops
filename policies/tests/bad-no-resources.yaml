@@ -1,0 +1,10 @@
+# Non conforme : pas de resources.requests / limits -> doit etre rejete par Gatekeeper
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-no-resources
+  namespace: tp2
+spec:
+  containers:
+    - name: web
+      image: nginx:1.27.3

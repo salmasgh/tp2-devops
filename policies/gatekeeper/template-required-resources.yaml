@@ -1,0 +1,52 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredresources
+  annotations:
+    description: Exige resources.requests et resources.limits (cpu et memory) sur chaque conteneur.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredResources
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            resources:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredresources
+
+        pod_spec := input.review.object.spec {
+          input.review.object.kind == "Pod"
+        }
+        pod_spec := input.review.object.spec.template.spec {
+          input.review.object.kind != "Pod"
+          input.review.object.kind != "CronJob"
+        }
+        pod_spec := input.review.object.spec.jobTemplate.spec.template.spec {
+          input.review.object.kind == "CronJob"
+        }
+
+        containers[c] { c := pod_spec.containers[_] }
+        containers[c] { c := pod_spec.initContainers[_] }
+
+        sections := ["requests", "limits"]
+
+        violation[{"msg": msg}] {
+          c := containers[_]
+          s := sections[_]
+          r := input.parameters.resources[_]
+          not has_value(c, s, r)
+          msg := sprintf("container <%v> doit definir resources.%v.%v", [c.name, s, r])
+        }
+
+        has_value(c, s, r) {
+          v := c.resources[s][r]
+          v != ""
+        }

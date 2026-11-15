@@ -1,0 +1,45 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdisallowlatesttag
+  annotations:
+    description: Interdit les images sans tag ou avec le tag latest.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDisallowLatestTag
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdisallowlatesttag
+
+        # Pod spec of a Pod or of a workload (Deployment, StatefulSet, Job, CronJob...)
+        pod_spec := input.review.object.spec {
+          input.review.object.kind == "Pod"
+        }
+        pod_spec := input.review.object.spec.template.spec {
+          input.review.object.kind != "Pod"
+          input.review.object.kind != "CronJob"
+        }
+        pod_spec := input.review.object.spec.jobTemplate.spec.template.spec {
+          input.review.object.kind == "CronJob"
+        }
+
+        containers[c] { c := pod_spec.containers[_] }
+        containers[c] { c := pod_spec.initContainers[_] }
+
+        violation[{"msg": msg}] {
+          c := containers[_]
+          not contains(c.image, "@")
+          endswith(c.image, ":latest")
+          msg := sprintf("container <%v> utilise le tag interdit latest (%v)", [c.name, c.image])
+        }
+
+        violation[{"msg": msg}] {
+          c := containers[_]
+          not contains(c.image, "@")
+          parts := split(c.image, "/")
+          not contains(parts[count(parts) - 1], ":")
+          msg := sprintf("container <%v> n'a pas de tag explicite (%v) : latest implicite interdit", [c.name, c.image])
+        }

@@ -1,0 +1,127 @@
+name: CI/CD - Payment API
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**.md"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/tp2-devops
+  SONAR_HOST_URL: http://localhost:9000
+
+permissions:
+  contents: read
+
+jobs:
+  lint-test:
+    name: 1. Lint & Unit Tests (coverage >= 85%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Lint (ruff)
+        run: ruff check . && ruff format --check .
+      - name: Unit tests + coverage (Cobertura & LCOV)
+        run: pytest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage.xml
+            coverage.lcov
+
+  sonarqube:
+    name: 2. SonarQube Analysis & Quality Gate
+    needs: lint-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+      - name: Start SonarQube (ephemeral)
+        run: |
+          docker run -d --name sonarqube -p 9000:9000 \
+            -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true sonarqube:10.7.0-community
+      - name: Configure Quality Gate & token
+        env:
+          SONAR_ADMIN_PASSWORD: ${{ secrets.SONAR_ADMIN_PASSWORD || 'Tp2-Ephemeral-Admin#2026' }}
+        run: |
+          TOKEN=$(./ci/sonar-setup.sh | tail -1)
+          echo "::add-mask::$TOKEN"
+          echo "SONAR_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+      - name: SonarQube scan (blocking on Quality Gate)
+        run: |
+          docker run --rm --network host -e SONAR_HOST_URL -e SONAR_TOKEN \
+            -v "$PWD:/usr/src" sonarsource/sonar-scanner-cli:11.1 \
+            -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300
+      - name: Quality Gate report
+        if: always()
+        run: |
+          curl -s -u "$SONAR_TOKEN:" "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=tp2-payment-api" > qg.json || true
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          try:
+              ps = json.load(open("qg.json"))["projectStatus"]
+          except Exception:
+              print("Quality Gate status unavailable"); raise SystemExit
+          icon = {"OK": "✅", "ERROR": "❌"}.get(ps["status"], "⚠️")
+          print(f"## SonarQube Quality Gate: {icon} {ps['status']}\n")
+          print("| Metric | Status | Actual | Threshold |\n|---|---|---|---|")
+          for c in ps["conditions"]:
+              print(f"| {c['metricKey']} | {c['status']} | {c.get('actualValue','-')} | {c['comparator']} {c['errorThreshold']} |")
+          PY
+          cat "$GITHUB_STEP_SUMMARY"
+
+  build-scan-push:
+    name: 3. Docker Build, Trivy Scan & Push
+    needs: sonarqube
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t "$IMAGE:${{ github.sha }}" .
+      - name: Trivy vulnerability scan (CRITICAL = fail)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 \
+            image --scanners vuln --severity HIGH,CRITICAL --exit-code 0 --no-progress "$IMAGE:${{ github.sha }}"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 \
+            image --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 --no-progress "$IMAGE:${{ github.sha }}"
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        run: |
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:build-${{ github.run_number }}"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:build-${{ github.run_number }}"
+
+  gitops-update:
+    name: 4. GitOps - bump image tag (ArgoCD sync)
+    needs: build-scan-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update kustomize image tag
+        run: |
+          sed -i "s|newTag: .*|newTag: \"${{ github.sha }}\"|" k8s/overlays/dev/kustomization.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(gitops): deploy payment-api ${{ github.sha }} [skip ci]" || exit 0
+          git push
