@@ -1,0 +1,91 @@
+# SLO payment-api
+#  - Availability SLO : 99.5 % de requetes reussies (status < 500)  => error budget = 0.5 %
+#  - Latency SLO      : 95 % des requetes < 200 ms (p95 <= 200 ms)
+# Alerting multi-window multi-burn-rate (Google SRE Workbook) :
+#  - CRITICAL (page)  : 2 % du budget (30 j) consomme en 1 h  => burn rate 14.4 (fenetres 1h ET 5m)
+#  - WARNING  (slack) : 5 % du budget (30 j) consomme en 6 h  => burn rate 6    (fenetres 6h ET 30m)
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: payment-api-slo
+  namespace: monitoring
+  labels:
+    app: payment-api
+spec:
+  groups:
+    - name: payment-api-sli
+      interval: 15s
+      rules:
+        # ---- ratio d'erreurs (5xx / total) par fenetre ----
+        - record: slo:sli_error:ratio_rate5m
+          expr: |
+            sum(rate(http_requests_total{app="payment-api",status=~"5.."}[5m]))
+            / clamp_min(sum(rate(http_requests_total{app="payment-api"}[5m])), 1e-9)
+        - record: slo:sli_error:ratio_rate30m
+          expr: |
+            sum(rate(http_requests_total{app="payment-api",status=~"5.."}[30m]))
+            / clamp_min(sum(rate(http_requests_total{app="payment-api"}[30m])), 1e-9)
+        - record: slo:sli_error:ratio_rate1h
+          expr: |
+            sum(rate(http_requests_total{app="payment-api",status=~"5.."}[1h]))
+            / clamp_min(sum(rate(http_requests_total{app="payment-api"}[1h])), 1e-9)
+        - record: slo:sli_error:ratio_rate6h
+          expr: |
+            sum(rate(http_requests_total{app="payment-api",status=~"5.."}[6h]))
+            / clamp_min(sum(rate(http_requests_total{app="payment-api"}[6h])), 1e-9)
+        - record: slo:sli_error:ratio_rate30d
+          expr: |
+            sum(increase(http_requests_total{app="payment-api",status=~"5.."}[30d]))
+            / clamp_min(sum(increase(http_requests_total{app="payment-api"}[30d])), 1e-9)
+        # ---- burn rates (error ratio / error budget 0.005) ----
+        - record: slo:burn_rate:5m
+          expr: slo:sli_error:ratio_rate5m / 0.005
+        - record: slo:burn_rate:30m
+          expr: slo:sli_error:ratio_rate30m / 0.005
+        - record: slo:burn_rate:1h
+          expr: slo:sli_error:ratio_rate1h / 0.005
+        - record: slo:burn_rate:6h
+          expr: slo:sli_error:ratio_rate6h / 0.005
+        # ---- error budget restant sur 30 jours (1 = 100 %) ----
+        - record: slo:error_budget_remaining:ratio30d
+          expr: 1 - (slo:sli_error:ratio_rate30d / 0.005)
+        # ---- SLI latence : part des requetes < 200 ms ----
+        - record: slo:sli_latency:ratio_rate5m
+          expr: |
+            sum(rate(http_request_duration_seconds_bucket{app="payment-api",le="0.2"}[5m]))
+            / clamp_min(sum(rate(http_request_duration_seconds_count{app="payment-api"}[5m])), 1e-9)
+        - record: slo:latency_p95:5m
+          expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{app="payment-api"}[5m])))
+
+    - name: payment-api-slo-alerts
+      rules:
+        - alert: PaymentApiErrorBudgetBurnCritical
+          expr: slo:burn_rate:1h > 14.4 and slo:burn_rate:5m > 14.4
+          for: 1m
+          labels:
+            severity: critical
+            slo: availability
+            channel: page
+          annotations:
+            summary: "payment-api brule l'error budget a {{ $value | humanize }}x (seuil 14.4) - 2 % du budget en 1h"
+            description: "Burn rate 1h et 5m > 14.4 : a ce rythme le budget mensuel (0.5 %) est epuise en ~2 jours. Paging de l'astreinte."
+            runbook_url: https://github.com/salmasgh/tp2-devops/blob/main/docs/runbook.md
+        - alert: PaymentApiErrorBudgetBurnWarning
+          expr: slo:burn_rate:6h > 6 and slo:burn_rate:30m > 6
+          for: 2m
+          labels:
+            severity: warning
+            slo: availability
+            channel: slack
+          annotations:
+            summary: "payment-api brule l'error budget a {{ $value | humanize }}x (seuil 6) - 5 % du budget en 6h"
+            description: "Burn rate 6h et 30m > 6 : notification Slack #sre-alerts."
+        - alert: PaymentApiLatencySLOBreach
+          expr: slo:latency_p95:5m > 0.2
+          for: 2m
+          labels:
+            severity: warning
+            slo: latency
+            channel: slack
+          annotations:
+            summary: "p95 de latence = {{ $value | humanizeDuration }} (> 200 ms)"

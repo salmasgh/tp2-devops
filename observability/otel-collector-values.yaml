@@ -12,7 +12,7 @@ presets:
     enabled: true
 config:
   receivers:
-    filelog:
+    file_log:
       include:
         - /var/log/pods/tp2_*/*/*.log
   processors:
@@ -31,22 +31,22 @@ config:
             - set(attributes["level"], cache["level"]) where cache["level"] != nil
             - set(severity_text, cache["level"]) where cache["level"] != nil
   exporters:
-    otlp/tempo:
+    otlp_grpc/tempo:
       endpoint: tempo.monitoring.svc:4317
       tls:
         insecure: true
-    otlphttp/loki:
+    otlp_http/loki:
       endpoint: http://loki.monitoring.svc:3100/otlp
   service:
     pipelines:
       traces:
         receivers: [otlp]
         processors: [memory_limiter, batch]
-        exporters: [otlp/tempo]
+        exporters: [otlp_grpc/tempo]
       logs:
-        receivers: [filelog]
-        processors: [memory_limiter, k8sattributes, resource/logs, transform/trace_id, batch]
-        exporters: [otlphttp/loki]
+        receivers: [file_log]
+        processors: [memory_limiter, k8s_attributes, resource/logs, transform/trace_id, batch]
+        exporters: [otlp_http/loki]
       metrics: null
 ports:
   otlp:

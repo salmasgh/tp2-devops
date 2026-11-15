@@ -1,0 +1,38 @@
+# Execution du test k6 dans le cluster (conforme aux regles Gatekeeper : tag explicite + resources)
+# kubectl -n tp2 create configmap k6-script --from-file=k6/load-test.js --dry-run=client -o yaml | kubectl apply -f -
+# kubectl apply -f k6/k6-job.yaml && kubectl -n tp2 logs -f job/k6-load-test
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-load-test
+  namespace: tp2
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: k6
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          image: grafana/k6:0.54.0
+          args: ["run", "--summary-export=/tmp/summary.json", "/scripts/load-test.js"]
+          env:
+            - name: BASE_URL
+              value: http://payment-api.tp2.svc
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "3"
+              memory: 3Gi
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: k6-script
