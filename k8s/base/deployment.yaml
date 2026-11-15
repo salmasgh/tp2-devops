@@ -35,7 +35,7 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://otel-collector-opentelemetry-collector.monitoring.svc:4318
             - name: FLAKY_ERROR_RATE
-              value: "0.1"
+              value: "0.5"
             - name: CHECKOUT_MIN_DELAY
               value: "0.05"
             - name: CHECKOUT_MAX_DELAY
