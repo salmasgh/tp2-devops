@@ -8,8 +8,9 @@ NEW_PWD="${SONAR_ADMIN_PASSWORD:?SONAR_ADMIN_PASSWORD is required}"
 GATE="TP2-Strict-Gate"
 
 echo "Waiting for SonarQube at $HOST ..." >&2
+status=""
 for _ in $(seq 1 90); do
-  status=$(curl -s "$HOST/api/system/status" | sed -n 's/.*"status":"\([A-Z_]*\)".*/\1/p')
+  status=$( (curl -s "$HOST/api/system/status" || true) | sed -n 's/.*"status":"\([A-Z_]*\)".*/\1/p')
   [ "$status" = "UP" ] && break
   sleep 5
 done
@@ -34,6 +35,11 @@ cond duplicated_lines_density       GT 3
 cond new_duplicated_lines_density   GT 3
 cond bugs                           GT 0
 cond vulnerabilities                GT 0
+# The "Clean as You Code" gate ships with new_coverage < 80 : tighten it to 85
+ncid=$(curl -s -u "$AUTH" "$HOST/api/qualitygates/show?name=$GATE" \
+  | grep -o '"id":"[^"]*","metric":"new_coverage"' | cut -d'"' -f4 || true)
+[ -n "$ncid" ] && api qualitygates/update_condition --data-urlencode "id=$ncid" \
+  --data-urlencode "metric=new_coverage" --data-urlencode "op=LT" --data-urlencode "error=85" >/dev/null
 api qualitygates/set_as_default --data-urlencode "name=$GATE" >/dev/null
 echo "Quality Gate '$GATE' configured and set as default" >&2
 
