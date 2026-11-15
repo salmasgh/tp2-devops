@@ -1,0 +1,10 @@
+# Tempo mono-binaire : reception OTLP (grpc 4317 / http 4318)
+tempo:
+  reportingEnabled: false
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318

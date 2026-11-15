@@ -1,0 +1,106 @@
+# kube-prometheus-stack : Prometheus + Alertmanager + Grafana
+kubeEtcd: { enabled: false }
+kubeControllerManager: { enabled: false }
+kubeScheduler: { enabled: false }
+kubeProxy: { enabled: false }
+
+prometheus:
+  prometheusSpec:
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    retention: 7d
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    # Scrape automatique des pods annotés prometheus.io/scrape=true
+    additionalScrapeConfigs:
+      - job_name: kubernetes-annotated-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+
+alertmanager:
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: "null"
+      group_by: [alertname, slo]
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      routes:
+        - matchers: ['severity="critical"']
+          receiver: pager
+        - matchers: ['severity="warning"']
+          receiver: slack
+    receivers:
+      - name: "null"
+      - name: pager
+        webhook_configs:
+          - url: http://alert-sink.monitoring.svc:8080/page
+            send_resolved: true
+      - name: slack
+        slack_configs:
+          - api_url_file: /etc/alertmanager/secrets/alertmanager-slack/webhook-url
+            channel: "#sre-alerts"
+            send_resolved: true
+            title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+            text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ "\n" }}{{ end }}'
+  alertmanagerSpec:
+    secrets:
+      - alertmanager-slack
+
+grafana:
+  adminPassword: tp2-grafana-admin
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      url: http://loki.monitoring.svc:3100
+      jsonData:
+        derivedFields:
+          - name: trace_id
+            datasourceUid: tempo
+            matcherRegex: '"trace_id": "(\w+)"'
+            url: "$${__value.raw}"
+            urlDisplayLabel: "Voir la trace dans Tempo"
+    - name: Tempo
+      uid: tempo
+      type: tempo
+      url: http://tempo.monitoring.svc:3200
+      jsonData:
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: "-5m"
+          spanEndTimeShift: "5m"
+          filterByTraceID: true
+          customQuery: true
+          query: '{service_name="payment-api"} |= "$${__trace.traceId}"'
+        serviceMap:
+          datasourceUid: prometheus
+        nodeGraph:
+          enabled: true
