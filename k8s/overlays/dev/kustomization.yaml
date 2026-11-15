@@ -14,4 +14,4 @@ replicas:
 images:
   - name: payment-api
     newName: ghcr.io/salmasgh/tp2-devops
-    newTag: "0f249dc4dd16a9bf5f7dee020695d7039b9e98b0"
+    newTag: "dabb2123b9ac6f1de2895995b82fb5c6c03704f7"
