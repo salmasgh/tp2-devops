@@ -54,8 +54,12 @@ jobs:
             -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true sonarqube:10.7.0-community
       - name: Configure Quality Gate & token
         env:
-          SONAR_ADMIN_PASSWORD: ${{ secrets.SONAR_ADMIN_PASSWORD || 'Tp2-Ephemeral-Admin#2026' }}
+          SONAR_ADMIN_PASSWORD: ${{ secrets.SONAR_ADMIN_PASSWORD }}
         run: |
+          # No password in clear in the repo: use the secret if defined, else a random one per run.
+          if [ -z "$SONAR_ADMIN_PASSWORD" ]; then SONAR_ADMIN_PASSWORD="Tp2-$(openssl rand -hex 16)#A"; fi
+          echo "::add-mask::$SONAR_ADMIN_PASSWORD"
+          export SONAR_ADMIN_PASSWORD
           TOKEN=$(./ci/sonar-setup.sh | tail -1)
           echo "::add-mask::$TOKEN"
           echo "SONAR_TOKEN=$TOKEN" >> "$GITHUB_ENV"
