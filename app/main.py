@@ -15,6 +15,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pydantic import BaseModel, Field
 
+from app.refunds import router as refunds_router
 from app.telemetry import VERSION, configure_logging, configure_otel
 
 configure_otel()
@@ -73,6 +74,7 @@ _payments: dict[str, Payment] = {}
 
 app = FastAPI(title="Payment API", version=VERSION)
 FastAPIInstrumentor.instrument_app(app, excluded_urls="metrics,health")
+app.include_router(refunds_router)
 
 
 @app.middleware("http")
